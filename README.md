@@ -136,13 +136,7 @@ The web interface provides a user-friendly way to interact with the Marketing Ad
 
 ## LLM Model Selection
 
-This implementation uses **GPT-4** as the primary model because:
-
-- It has strong creative writing capabilities essential for compelling ad copy
-- It understands marketing concepts, audience psychology, and brand voice well
-- It can generate diverse ad formats with the right tone and messaging
-- It can take marketing-specific instructions and adapt to different brand voices
-- It has sufficient context window to handle campaign briefs and reference materials
+This implementation uses **GPT-4** as the primary model.
 
 ## System Architecture
 
