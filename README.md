@@ -88,6 +88,17 @@ AdNova/
    OPENAI_API_KEY=your_api_key_here
    ```
 
+**NOTE:** When commiting to this repo, please do not commit the `.env` file. You can use the following commands to ensure this:
+
+```
+git rm --cached config/.env
+echo "config/.env" >> .gitignore
+git add .gitignore
+git add -A
+git commit -m "Your commit message here"
+git push
+```
+
 ## Usage
 
 ### Starting the Application
