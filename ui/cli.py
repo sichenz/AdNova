@@ -26,31 +26,34 @@ def run_cli(agent):
         print("\nMAIN MENU:")
         print("1. Create New Campaign Brief")
         print("2. Generate Ads")
-        print("3. View Generated Ads")
-        print("4. Provide Feedback on Ads")
-        print("5. Regenerate Ads with Improvements")
-        print("6. Get Campaign Recommendations")
-        print("7. Export Campaign Assets")
+        print("3. Generate Visual Content")
+        print("4. View Generated Ads")
+        print("5. Provide Feedback on Ads")
+        print("6. Regenerate Ads with Improvements")
+        print("7. Get Campaign Recommendations")
+        print("8. Export Campaign Assets")
         print("0. Exit")
         
-        choice = input("\nEnter your choice (0-7): ")
+        choice = input("\nEnter your choice (0-8): ")
         
         if choice == "0":
-            print("\nThank you for using AdNova. Goodbye!")
+            print("\nThank you for using Marketing Ad Generator. Goodbye!")
             break
         elif choice == "1":
             create_campaign_brief(agent)
         elif choice == "2":
             generate_ads(agent)
         elif choice == "3":
-            view_generated_ads(agent)
+            generate_visual_content(agent)
         elif choice == "4":
-            provide_feedback(agent)
+            view_generated_ads(agent)
         elif choice == "5":
-            regenerate_ads(agent)
+            provide_feedback(agent)
         elif choice == "6":
-            get_recommendations(agent)
+            regenerate_ads(agent)
         elif choice == "7":
+            get_recommendations(agent)
+        elif choice == "8":
             export_campaign(agent)
         else:
             print("Invalid choice. Please try again.")
@@ -257,6 +260,152 @@ def generate_ads(agent):
     
     input("\nPress Enter to continue...")
 
+def generate_visual_content(agent):
+    """
+    Generate visual content (images and videos) for an existing campaign brief.
+    
+    Args:
+        agent: The MarketingAdAgent instance
+    """
+    print("\n===== Generate Visual Content =====")
+    
+    # Check for CUDA
+    import torch
+    if not torch.cuda.is_available():
+        print("\nWARNING: No GPU with CUDA detected. Visual generation will use placeholders only.")
+        print("For full functionality, please run on a system with a compatible GPU.")
+        print("Continue anyway? (y/n)")
+        if input().lower() != "y":
+            return
+    
+    # Get all campaign briefs
+    briefs_dir = "data/campaign_briefs"
+    if not os.path.exists(briefs_dir) or not os.listdir(briefs_dir):
+        print("No campaign briefs found. Please create a campaign brief first.")
+        input("\nPress Enter to continue...")
+        return
+    
+    # Display available briefs
+    briefs = []
+    print("Available Campaign Briefs:")
+    for i, filename in enumerate(os.listdir(briefs_dir), 1):
+        if filename.endswith(".json"):
+            with open(os.path.join(briefs_dir, filename), "r") as f:
+                brief = json.load(f)
+                briefs.append(brief)
+                print(f"{i}. {brief['product_name']} (ID: {brief['brief_id']})")
+    
+    # Select a brief
+    selection = input("\nSelect a campaign brief (enter number): ")
+    try:
+        index = int(selection) - 1
+        if index < 0 or index >= len(briefs):
+            print("Invalid selection.")
+            return
+        selected_brief = briefs[index]
+    except ValueError:
+        print("Invalid input. Please enter a number.")
+        return
+    
+    # Select content type
+    print("\nContent Type:")
+    print("1. Images Only")
+    print("2. Videos Only")
+    print("3. Both Images and Videos")
+    
+    content_type_selection = input("\nSelect content type (enter number): ")
+    
+    if content_type_selection == "1":
+        content_type = "image"
+        print("\nGenerating Images...")
+    elif content_type_selection == "2":
+        content_type = "video"
+        print("\nGenerating Videos...")
+    elif content_type_selection == "3":
+        content_type = "both"
+        print("\nGenerating Images and Videos...")
+    else:
+        print("Invalid selection.")
+        return
+    
+    # Number of visuals
+    if content_type in ["image", "both"]:
+        images_count = input("\nNumber of images to generate (1-5, default 1): ")
+        try:
+            images_count = int(images_count) if images_count else 1
+            images_count = min(max(images_count, 1), 5)  # Ensure between 1 and 5
+        except ValueError:
+            images_count = 1
+            print("Invalid input. Using default value of 1.")
+    else:
+        images_count = 0
+    
+    if content_type in ["video", "both"]:
+        videos_count = input("\nNumber of videos to generate (1-3, default 1): ")
+        try:
+            videos_count = int(videos_count) if videos_count else 1
+            videos_count = min(max(videos_count, 1), 3)  # Ensure between 1 and 3
+        except ValueError:
+            videos_count = 1
+            print("Invalid input. Using default value of 1.")
+    else:
+        videos_count = 0
+    
+    # Visual theme (optional)
+    from config.settings import VISUAL_THEMES
+    print("\nVisual Theme (optional):")
+    for i, theme in enumerate(VISUAL_THEMES, 1):
+        print(f"{i}. {theme}")
+    
+    theme_selection = input("\nSelect a visual theme (enter number or 0 for none): ")
+    visual_theme = None
+    try:
+        theme_index = int(theme_selection) - 1
+        if 0 <= theme_index < len(VISUAL_THEMES):
+            visual_theme = VISUAL_THEMES[theme_index]
+    except ValueError:
+        # No theme selected
+        pass
+    
+    # Custom prompt (optional)
+    custom_prompt = input("\nCustom prompt (optional, press Enter to skip): ")
+    custom_prompt = custom_prompt if custom_prompt else None
+    
+    # Generate the visual content
+    print("\nGenerating visual content... This may take several minutes.")
+    if content_type == "video" or content_type == "both":
+        print("Video generation is particularly resource-intensive.")
+    
+    count = max(images_count if content_type != "video" else 0,
+               videos_count if content_type != "image" else 0)
+    
+    visual_record = agent.generate_visual_content(
+        campaign_brief=selected_brief,
+        content_type=content_type,
+        count=count,
+        visual_theme=visual_theme,
+        prompt_override=custom_prompt
+    )
+    
+    # Display results
+    print("\nVisual Content Generation Complete!")
+    print(f"Visual ID: {visual_record['visual_id']}")
+    
+    if "visuals" in visual_record:
+        for visual in visual_record["visuals"]:
+            if "image_id" in visual:
+                print(f"\nImage generated: {visual['output_path']}")
+                print(f"Prompt used: {visual['enhanced_prompt'][:100]}...")
+            elif "video_id" in visual:
+                print(f"\nVideo generated: {visual['output_path']}")
+                print(f"Prompt used: {visual['enhanced_prompt'][:100]}...")
+    
+    print("\nYou can find the generated visuals in the following directories:")
+    print(f"Images: {os.path.abspath('data/generated_images')}")
+    print(f"Videos: {os.path.abspath('data/generated_videos')}")
+    
+    input("\nPress Enter to continue...")
+    
 def view_generated_ads(agent):
     """
     View previously generated ads.

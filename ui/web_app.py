@@ -54,6 +54,7 @@ def run_web_app(agent):
         tabs = [
             "Create Brief",
             "Generate Ads",
+            "Visual Content",
             "View Ads",
             "Feedback & Improvement",
             "Analytics & Insights",
@@ -80,6 +81,8 @@ def run_web_app(agent):
         display_create_brief_tab()
     elif st.session_state.current_tab == "Generate Ads":
         display_generate_ads_tab()
+    elif st.session_state.current_tab == "Visual Content":
+        display_visual_content_tab()
     elif st.session_state.current_tab == "View Ads":
         display_view_ads_tab()
     elif st.session_state.current_tab == "Feedback & Improvement":
@@ -524,6 +527,302 @@ def display_generate_ads_tab():
                 for ad in recent_ads[:5]:
                     st.markdown(f"**{ad['product_name']}** - {ad['ad_type']} ({ad['created_at'][:10]})")
 
+def display_visual_content_tab():
+    """Display the Visual Content tab for generating images and videos."""
+    st.header("Generate Visual Content")
+    st.markdown("Create compelling images and videos for your marketing campaigns using state-of-the-art AI models.")
+    
+    # Check if CUDA is available
+    import torch
+    cuda_available = torch.cuda.is_available()
+    
+    if not cuda_available:
+        st.warning("⚠️ No GPU with CUDA detected. Visual generation will use placeholders only. For full functionality, please run on a system with a compatible GPU.")
+    
+    # Check if there are any campaign briefs
+    briefs_dir = "data/campaign_briefs"
+    if not os.path.exists(briefs_dir) or not os.listdir(briefs_dir):
+        st.warning("No campaign briefs found. Please create a campaign brief first.")
+        if st.button("Create Campaign Brief"):
+            st.session_state.current_tab = "Create Brief"
+        return
+    
+    # Load all campaign briefs
+    briefs = []
+    for filename in os.listdir(briefs_dir):
+        if filename.endswith(".json"):
+            with open(os.path.join(briefs_dir, filename), "r") as f:
+                brief = json.load(f)
+                briefs.append(brief)
+    
+    # Sort briefs by creation date (newest first)
+    briefs.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        with st.form("generate_visuals_form"):
+            st.subheader("Visual Content Settings")
+            
+            # Campaign brief selection
+            brief_options = {brief['brief_id']: f"{brief['product_name']} (Created: {brief.get('created_at', 'Unknown')[:10]})" for brief in briefs}
+            selected_brief_id = st.selectbox(
+                "Select Campaign Brief",
+                options=list(brief_options.keys()),
+                format_func=lambda x: brief_options[x],
+                index=0 if not hasattr(st.session_state, 'created_brief_id') or st.session_state.created_brief_id not in brief_options 
+                      else list(brief_options.keys()).index(st.session_state.created_brief_id)
+            )
+            
+            # Get the selected brief
+            selected_brief = next((b for b in briefs if b['brief_id'] == selected_brief_id), None)
+            
+            if selected_brief:
+                st.markdown("##### Campaign Summary")
+                st.markdown(f"**Product:** {selected_brief['product_name']}")
+                st.markdown(f"**Target Audience:** {selected_brief['target_audience'][:100]}...")
+            
+            # Visual content type selection
+            content_type = st.radio(
+                "Content Type",
+                options=["Images Only", "Videos Only", "Both Images and Videos"],
+                horizontal=True
+            )
+            
+            # Number of visuals
+            col_img, col_vid = st.columns(2)
+            
+            with col_img:
+                if content_type in ["Images Only", "Both Images and Videos"]:
+                    images_count = st.slider(
+                        "Number of Images", 
+                        min_value=1, 
+                        max_value=5, 
+                        value=1,
+                        disabled=content_type == "Videos Only"
+                    )
+                else:
+                    images_count = 0
+            
+            with col_vid:
+                if content_type in ["Videos Only", "Both Images and Videos"]:
+                    videos_count = st.slider(
+                        "Number of Videos", 
+                        min_value=1, 
+                        max_value=3, 
+                        value=1,
+                        disabled=content_type == "Images Only"
+                    )
+                else:
+                    videos_count = 0
+            
+            # Visual theme selection
+            from config.settings import VISUAL_THEMES
+            visual_theme = st.selectbox(
+                "Visual Theme",
+                options=[""] + VISUAL_THEMES,
+                format_func=lambda x: "No specific theme" if not x else x
+            )
+            
+            # Custom prompt (optional)
+            with st.expander("Advanced Options"):
+                custom_prompt = st.text_area(
+                    "Custom Prompt (Optional)",
+                    help="Leave blank to automatically generate a prompt based on the campaign brief",
+                    height=100
+                )
+                
+                # Image size options (if generating images)
+                if content_type in ["Images Only", "Both Images and Videos"]:
+                    st.markdown("##### Image Size")
+                    img_size_options = {
+                        "square": "Square (1:1) - 1024x1024",
+                        "portrait": "Portrait (3:4) - 768x1024",
+                        "landscape": "Landscape (16:9) - 1024x576"
+                    }
+                    img_size = st.radio(
+                        "Image Aspect Ratio",
+                        options=list(img_size_options.keys()),
+                        format_func=lambda x: img_size_options[x],
+                        horizontal=True
+                    )
+                
+                # Video size options (if generating videos)
+                if content_type in ["Videos Only", "Both Images and Videos"]:
+                    st.markdown("##### Video Size")
+                    video_size_options = {
+                        "widescreen": "Widescreen (16:9) - 848x480",
+                        "square": "Square (1:1) - 512x512",
+                        "vertical": "Vertical (9:16) - 480x848"
+                    }
+                    video_size = st.radio(
+                        "Video Aspect Ratio",
+                        options=list(video_size_options.keys()),
+                        format_func=lambda x: video_size_options[x],
+                        horizontal=True
+                    )
+            
+            # Warning about generation time
+            if content_type in ["Videos Only", "Both Images and Videos"]:
+                st.info("⏱️ Video generation can take several minutes per video depending on available GPU resources.")
+            
+            # Generation button
+            generate_submitted = st.form_submit_button("Generate Visual Content", use_container_width=True)
+            
+            if generate_submitted:
+                if not selected_brief:
+                    st.error("Please select a valid campaign brief.")
+                elif content_type == "Images Only" and images_count < 1:
+                    st.error("Please select at least one image to generate.")
+                elif content_type == "Videos Only" and videos_count < 1:
+                    st.error("Please select at least one video to generate.")
+                else:
+                    # Determine content type parameter
+                    content_type_param = "image" if content_type == "Images Only" else "video" if content_type == "Videos Only" else "both"
+                    
+                    # Set image dimensions based on selection
+                    if content_type in ["Images Only", "Both Images and Videos"]:
+                        if img_size == "square":
+                            img_width, img_height = 1024, 1024
+                        elif img_size == "portrait":
+                            img_width, img_height = 768, 1024
+                        elif img_size == "landscape":
+                            img_width, img_height = 1024, 576
+                    
+                    # Set video dimensions based on selection
+                    if content_type in ["Videos Only", "Both Images and Videos"]:
+                        if video_size == "widescreen":
+                            video_width, video_height = 848, 480
+                        elif video_size == "square":
+                            video_width, video_height = 512, 512
+                        elif video_size == "vertical":
+                            video_width, video_height = 480, 848
+                    
+                    with st.spinner("Generating visual content... This may take a few minutes."):
+                        try:
+                            # Generate the visual content
+                            visual_record = st.session_state.agent.generate_visual_content(
+                                campaign_brief=selected_brief,
+                                content_type=content_type_param,
+                                count=max(images_count if content_type != "Videos Only" else 0, 
+                                         videos_count if content_type != "Images Only" else 0),
+                                visual_theme=visual_theme if visual_theme else None,
+                                prompt_override=custom_prompt if custom_prompt else None
+                            )
+                            
+                            st.session_state.generated_visual_id = visual_record["visual_id"]
+                            st.success(f"Visual content generation complete! (ID: {visual_record['visual_id']})")
+                            
+                            # Display the generated visuals
+                            st.subheader("Generated Visual Content")
+                            
+                            # Display images
+                            if content_type in ["Images Only", "Both Images and Videos"] and "visuals" in visual_record:
+                                image_visuals = [v for v in visual_record["visuals"] if "image_id" in v]
+                                if image_visuals:
+                                    st.markdown("### Generated Images")
+                                    image_cols = st.columns(min(3, len(image_visuals)))
+                                    
+                                    for i, img_visual in enumerate(image_visuals):
+                                        col_idx = i % len(image_cols)
+                                        with image_cols[col_idx]:
+                                            if os.path.exists(img_visual["output_path"]):
+                                                st.image(img_visual["output_path"], caption=f"Image {i+1}")
+                                                st.download_button(
+                                                    f"Download Image {i+1}", 
+                                                    open(img_visual["output_path"], "rb"), 
+                                                    file_name=f"marketing_image_{i+1}.png"
+                                                )
+                                            else:
+                                                st.warning(f"Image file not found: {img_visual['output_path']}")
+                            
+                            # Display videos
+                            if content_type in ["Videos Only", "Both Images and Videos"] and "visuals" in visual_record:
+                                video_visuals = [v for v in visual_record["visuals"] if "video_id" in v]
+                                if video_visuals:
+                                    st.markdown("### Generated Videos")
+                                    for i, vid_visual in enumerate(video_visuals):
+                                        if os.path.exists(vid_visual["output_path"]):
+                                            st.video(vid_visual["output_path"])
+                                            st.download_button(
+                                                f"Download Video {i+1}", 
+                                                open(vid_visual["output_path"], "rb"), 
+                                                file_name=f"marketing_video_{i+1}.mp4"
+                                            )
+                                        else:
+                                            st.warning(f"Video file not found: {vid_visual['output_path']}")
+                        
+                        except Exception as e:
+                            st.error(f"Error generating visual content: {str(e)}")
+    
+    with col2:
+        st.subheader("Visual Content Information")
+        
+        # Visual models information
+        with st.expander("About the AI Models", expanded=True):
+            st.markdown("""
+            **Image Generation**: Stable Diffusion 3.5 Large
+            - State-of-the-art text-to-image model
+            - High quality image generation
+            - Strong typography capabilities
+            - Excellent prompt adherence
+            
+            **Video Generation**: Mochi 1
+            - Advanced text-to-video model
+            - High-fidelity motion
+            - Strong prompt adherence
+            - 31-84 frames per video
+            """)
+        
+        st.subheader("Tips for Better Results")
+        st.success("""
+        **For Better Visual Content:**
+        
+        - Choose visual themes that match your brand identity
+        - Select aspect ratios appropriate for your platform
+        - Images work well for print, social media posts, and banners
+        - Videos are great for social media ads, stories, and web headers
+        
+        **Prompt Tips:**
+        - Be specific about what should be in the scene
+        - Describe lighting, style, and mood
+        - Mention your product or service prominently
+        - For videos, describe motion and temporal progression
+        """)
+        
+        # Show recently generated visuals
+        visual_dir = "data/visual_content"
+        if os.path.exists(visual_dir) and os.listdir(visual_dir):
+            with st.expander("Recently Generated Visuals"):
+                # Get recent visual records
+                recent_visuals = []
+                for filename in os.listdir(visual_dir):
+                    if filename.endswith(".json"):
+                        with open(os.path.join(visual_dir, filename), "r") as f:
+                            visual = json.load(f)
+                            
+                            # Get brief info
+                            brief_file = os.path.join("data/campaign_briefs", f"{visual['brief_id']}.json")
+                            product_name = "Unknown Product"
+                            if os.path.exists(brief_file):
+                                with open(brief_file, "r") as bf:
+                                    brief = json.load(bf)
+                                    product_name = brief['product_name']
+                            
+                            recent_visuals.append({
+                                "visual_id": visual["visual_id"],
+                                "product_name": product_name,
+                                "content_type": visual["content_type"],
+                                "created_at": visual.get("created_at", "Unknown date")
+                            })
+                
+                # Sort by creation date (newest first)
+                recent_visuals.sort(key=lambda x: x["created_at"], reverse=True)
+                
+                # Display recent visuals
+                for visual in recent_visuals[:5]:
+                    st.markdown(f"**{visual['product_name']}** - {visual['content_type']} ({visual['created_at'][:10]})")
+                    
 def display_view_ads_tab():
     """Display the View Ads tab."""
     st.header("View Generated Ads")

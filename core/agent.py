@@ -16,6 +16,7 @@ from tools.ad_generator import AdGenerator
 from tools.audience_analyzer import AudienceAnalyzer
 from tools.brand_voice import BrandVoiceManager
 from tools.feedback_processor import ClientFeedbackProcessor
+from tools.visual_generator import VisualGenerator
 from utils.api_utils import get_openai_client
 from utils.text_processing import summarize_text
 
@@ -42,6 +43,7 @@ class MarketingAdAgent:
         self.audience_analyzer = AudienceAnalyzer(self.client)
         self.brand_voice_manager = BrandVoiceManager(self.client)
         self.feedback_processor = ClientFeedbackProcessor(self.client)
+        self.visual_generator = VisualGenerator(self.client)
         
         # Session info
         self.session_id = str(uuid.uuid4())
@@ -180,6 +182,171 @@ class MarketingAdAgent:
         
         return ad_record
     
+    def generate_visual_content(self, 
+                              campaign_brief, 
+                              content_type="image", 
+                              count=1, 
+                              visual_theme=None,
+                              width=None,
+                              height=None,
+                              prompt_override=None):
+        """
+        Generate visual content (images or videos) based on the campaign brief.
+        
+        Args:
+            campaign_brief (dict): The campaign brief
+            content_type (str): Type of visual content to generate ("image", "video", or "both")
+            count (int): Number of visuals to generate of each type
+            visual_theme (str, optional): Visual theme for the content
+            width (int, optional): Width of the visual content
+            height (int, optional): Height of the visual content
+            prompt_override (str, optional): Override the automatic prompt generation
+            
+        Returns:
+            dict: Generated visual content with metadata
+        """
+        # Plan the visual generation task
+        task_plan = self.planner.create_plan(
+            task="generate_visual_content",
+            campaign_brief=campaign_brief,
+            content_type=content_type
+        )
+        
+        if self.debug_mode:
+            print(f"Visual generation plan created: {task_plan['plan_summary']}")
+        
+        # Get custom prompt if not provided
+        custom_prompt = prompt_override
+        if not custom_prompt:
+            prompt_response = self.client.chat.completions.create(
+                model=DEFAULT_MODEL,
+                messages=[
+                    {"role": "system", "content": "You are an expert at creating prompts for AI image and video generation based on marketing briefs."},
+                    {"role": "user", "content": f"Create a detailed prompt for generating a marketing {content_type} for the following product/service:\n\nProduct: {campaign_brief['product_name']}\nDescription: {campaign_brief['description']}\nTarget Audience: {campaign_brief['target_audience']}\nCampaign Goals: {campaign_brief['campaign_goals']}\nTone: {campaign_brief['tone']}\n\nThe prompt should be detailed and visually descriptive, focusing on what should be seen in the {content_type}. If this is a video prompt, include motion details."}
+                ],
+                temperature=CREATIVE_TEMPERATURE,
+                max_tokens=300
+            )
+            custom_prompt = prompt_response.choices[0].message.content
+        
+        # Generate the visual content
+        visuals = self.visual_generator.generate_marketing_visuals(
+            campaign_brief=campaign_brief,
+            content_type=content_type,
+            count=count,
+            visual_theme=visual_theme
+        )
+        
+        # Create the visual content record
+        visual_id = str(uuid.uuid4())
+        visual_record = {
+            "visual_id": visual_id,
+            "brief_id": campaign_brief["brief_id"],
+            "created_at": datetime.now().isoformat(),
+            "content_type": content_type,
+            "count": count,
+            "visual_theme": visual_theme,
+            "custom_prompt": custom_prompt,
+            "visuals": visuals,
+            "task_plan": task_plan
+        }
+        
+        # Save the visual record
+        visual_file = os.path.join("data/visual_content", f"{visual_id}.json")
+        os.makedirs(os.path.dirname(visual_file), exist_ok=True)
+        with open(visual_file, "w") as f:
+            json.dump(visual_record, f, indent=2)
+        
+        if self.debug_mode:
+            print(f"Visual content generated. ID: {visual_id}")
+        
+        return visual_record
+    
+    def generate_integrated_ad_campaign(self,
+                                      campaign_brief,
+                                      ad_types=None,
+                                      include_images=True,
+                                      include_videos=False,
+                                      images_count=1,
+                                      videos_count=1,
+                                      ad_variations=2,
+                                      visual_theme=None):
+        """
+        Generate a complete ad campaign with both textual and visual content.
+        
+        Args:
+            campaign_brief (dict): The campaign brief
+            ad_types (list): Types of ads to generate
+            include_images (bool): Whether to include images
+            include_videos (bool): Whether to include videos
+            images_count (int): Number of images to generate
+            videos_count (int): Number of videos to generate
+            ad_variations (int): Number of variations for each ad type
+            visual_theme (str, optional): Visual theme for consistency
+            
+        Returns:
+            dict: Complete campaign with textual and visual content
+        """
+        # Default ad types if not specified
+        if not ad_types:
+            ad_types = ["social_media_post", "headline"]
+        
+        campaign_id = str(uuid.uuid4())
+        
+        # Generate text ads
+        text_ads = {}
+        for ad_type in ad_types:
+            ad_record = self.generate_ad(
+                campaign_brief=campaign_brief,
+                ad_type=ad_type,
+                variations=ad_variations
+            )
+            text_ads[ad_type] = ad_record
+        
+        # Generate visual content
+        visual_content = {}
+        
+        # Generate images if requested
+        if include_images and images_count > 0:
+            image_record = self.generate_visual_content(
+                campaign_brief=campaign_brief,
+                content_type="image",
+                count=images_count,
+                visual_theme=visual_theme
+            )
+            visual_content["images"] = image_record
+        
+        # Generate videos if requested
+        if include_videos and videos_count > 0:
+            video_record = self.generate_visual_content(
+                campaign_brief=campaign_brief,
+                content_type="video",
+                count=videos_count,
+                visual_theme=visual_theme
+            )
+            visual_content["videos"] = video_record
+        
+        # Create the integrated campaign record
+        campaign_record = {
+            "campaign_id": campaign_id,
+            "brief_id": campaign_brief["brief_id"],
+            "created_at": datetime.now().isoformat(),
+            "text_ads": text_ads,
+            "visual_content": visual_content,
+            "visual_theme": visual_theme
+        }
+        
+        # Save the campaign record
+        campaign_file = os.path.join("data/integrated_campaigns", f"{campaign_id}.json")
+        os.makedirs(os.path.dirname(campaign_file), exist_ok=True)
+        with open(campaign_file, "w") as f:
+            json.dump(campaign_record, f, indent=2)
+        
+        if self.debug_mode:
+            print(f"Integrated ad campaign generated. ID: {campaign_id}")
+        
+        return campaign_record
+    
     def process_feedback(self, ad_id, feedback, score=None):
         """
         Process client feedback on a generated ad.
@@ -241,223 +408,3 @@ class MarketingAdAgent:
             print(f"Feedback processed. ID: {feedback_id}")
         
         return feedback_record
-    
-    def regenerate_ad(self, ad_id, feedback_id=None, changes=None):
-        """
-        Regenerate an ad based on feedback or requested changes.
-        
-        Args:
-            ad_id (str): ID of the original ad
-            feedback_id (str, optional): ID of the feedback to incorporate
-            changes (dict, optional): Specific changes to make
-            
-        Returns:
-            dict: New ad record
-        """
-        # Get the original ad record
-        ad_file = os.path.join("data/generated_ads", f"{ad_id}.json")
-        with open(ad_file, "r") as f:
-            original_ad = json.load(f)
-        
-        # Get the campaign brief
-        brief_file = os.path.join("data/campaign_briefs", f"{original_ad['brief_id']}.json")
-        with open(brief_file, "r") as f:
-            campaign_brief = json.load(f)
-        
-        # Get feedback if provided
-        feedback_data = None
-        if feedback_id:
-            feedback_file = os.path.join("data/feedback", f"{feedback_id}.json")
-            with open(feedback_file, "r") as f:
-                feedback_data = json.load(f)
-        
-        # Generate improved ad
-        improved_ad = self.ad_generator.regenerate(
-            original_ad=original_ad,
-            campaign_brief=campaign_brief,
-            feedback=feedback_data,
-            changes=changes
-        )
-        
-        # Create the new ad record
-        new_ad_id = str(uuid.uuid4())
-        new_ad_record = {
-            "ad_id": new_ad_id,
-            "brief_id": campaign_brief["brief_id"],
-            "created_at": datetime.now().isoformat(),
-            "ad_type": original_ad["ad_type"],
-            "variations": improved_ad,
-            "original_ad_id": ad_id,
-            "feedback_id": feedback_id,
-            "changes_requested": changes,
-            "brand_voice_used": original_ad["brand_voice_used"]
-        }
-        
-        # Save the new ad
-        new_ad_file = os.path.join("data/generated_ads", f"{new_ad_id}.json")
-        with open(new_ad_file, "w") as f:
-            json.dump(new_ad_record, f, indent=2)
-        
-        # Add to memory
-        self.memory.add_generated_ad(new_ad_record)
-        
-        if self.debug_mode:
-            print(f"Ad regenerated. ID: {new_ad_id}")
-        
-        return new_ad_record
-    
-    def get_ad_recommendations(self, campaign_brief):
-        """
-        Get recommendations for ad types and approaches based on the campaign brief.
-        
-        Args:
-            campaign_brief (dict): The campaign brief
-            
-        Returns:
-            dict: Recommendations for the campaign
-        """
-        # Use audience insights to make recommendations
-        audience_insights = campaign_brief.get("audience_insights", {})
-        
-        recommendations_prompt = f"""
-        As a marketing expert, provide recommendations for ad types and approaches based on the following campaign brief:
-        
-        Product/Service: {campaign_brief['product_name']}
-        Description: {campaign_brief['description']}
-        Target Audience: {campaign_brief['target_audience']}
-        Campaign Goals: {campaign_brief['campaign_goals']}
-        Tone: {campaign_brief['tone']}
-        Key Selling Points: {', '.join(campaign_brief['key_selling_points'])}
-        Platform: {campaign_brief.get('platform', 'Not specified')}
-        
-        Audience Insights: {json.dumps(audience_insights, indent=2)}
-        
-        Provide the following recommendations:
-        1. Best ad types for this campaign
-        2. Recommended platforms
-        3. Key messaging points
-        4. Visual elements or imagery suggestions
-        5. Call-to-action recommendations
-        6. Best practices for this specific audience
-        """
-        
-        response = self.client.chat.completions.create(
-            model=DEFAULT_MODEL,
-            messages=[{"role": "system", "content": "You are a marketing strategy expert specializing in ad campaign optimization."},
-                     {"role": "user", "content": recommendations_prompt}],
-            temperature=DEFAULT_TEMPERATURE,
-            max_tokens=MAX_TOKENS
-        )
-        
-        recommendations = response.choices[0].message.content
-        
-        # Create recommendations record
-        rec_id = str(uuid.uuid4())
-        rec_record = {
-            "recommendation_id": rec_id,
-            "brief_id": campaign_brief["brief_id"],
-            "created_at": datetime.now().isoformat(),
-            "recommendations": recommendations
-        }
-        
-        # Add to memory
-        self.memory.add_recommendation(rec_record)
-        
-        return rec_record
-    
-    def export_campaign_assets(self, brief_id, format="json"):
-        """
-        Export all assets related to a campaign.
-        
-        Args:
-            brief_id (str): ID of the campaign brief
-            format (str): Export format (json, md, txt)
-            
-        Returns:
-            str: Path to the exported file
-        """
-        # Get the campaign brief
-        brief_file = os.path.join("data/campaign_briefs", f"{brief_id}.json")
-        with open(brief_file, "r") as f:
-            campaign_brief = json.load(f)
-        
-        # Get all ads for this brief
-        ads = []
-        for filename in os.listdir("data/generated_ads"):
-            if filename.endswith(".json"):
-                with open(os.path.join("data/generated_ads", filename), "r") as f:
-                    ad = json.load(f)
-                    if ad["brief_id"] == brief_id:
-                        ads.append(ad)
-        
-        # Get all feedback for these ads
-        feedback = []
-        for filename in os.listdir("data/feedback"):
-            if filename.endswith(".json"):
-                with open(os.path.join("data/feedback", filename), "r") as f:
-                    fb = json.load(f)
-                    if fb["brief_id"] == brief_id:
-                        feedback.append(fb)
-        
-        # Create export
-        export = {
-            "campaign_brief": campaign_brief,
-            "ads": ads,
-            "feedback": feedback,
-            "exported_at": datetime.now().isoformat()
-        }
-        
-        # Create exports directory if it doesn't exist
-        os.makedirs("data/exports", exist_ok=True)
-        
-        # Save export
-        export_path = os.path.join("data/exports", f"{brief_id}_export.{format}")
-        
-        if format == "json":
-            with open(export_path, "w") as f:
-                json.dump(export, f, indent=2)
-        elif format == "md":
-            with open(export_path, "w") as f:
-                f.write(f"# Campaign Export: {campaign_brief['product_name']}\n\n")
-                f.write(f"## Campaign Brief\n\n")
-                f.write(f"**Product:** {campaign_brief['product_name']}\n")
-                f.write(f"**Description:** {campaign_brief['description']}\n")
-                f.write(f"**Target Audience:** {campaign_brief['target_audience']}\n")
-                f.write(f"**Campaign Goals:** {campaign_brief['campaign_goals']}\n\n")
-                
-                f.write(f"## Generated Ads\n\n")
-                for ad in ads:
-                    f.write(f"### {ad['ad_type']} (ID: {ad['ad_id']})\n\n")
-                    for i, variation in enumerate(ad['variations']):
-                        f.write(f"**Variation {i+1}:**\n\n{variation}\n\n")
-                
-                f.write(f"## Feedback\n\n")
-                for fb in feedback:
-                    f.write(f"**Feedback on ad {fb['ad_id']}:**\n\n")
-                    f.write(f"{fb['feedback']}\n\n")
-                    if fb.get('score'):
-                        f.write(f"Score: {fb['score']}/10\n\n")
-        else:
-            # Default to text format
-            with open(export_path, "w") as f:
-                f.write(f"Campaign Export: {campaign_brief['product_name']}\n\n")
-                f.write(f"Campaign Brief:\n")
-                f.write(f"Product: {campaign_brief['product_name']}\n")
-                f.write(f"Description: {campaign_brief['description']}\n")
-                f.write(f"Target Audience: {campaign_brief['target_audience']}\n")
-                f.write(f"Campaign Goals: {campaign_brief['campaign_goals']}\n\n")
-                
-                f.write(f"Generated Ads:\n\n")
-                for ad in ads:
-                    f.write(f"{ad['ad_type']} (ID: {ad['ad_id']}):\n\n")
-                    for i, variation in enumerate(ad['variations']):
-                        f.write(f"Variation {i+1}:\n\n{variation}\n\n")
-                
-                f.write(f"Feedback:\n\n")
-                for fb in feedback:
-                    f.write(f"Feedback on ad {fb['ad_id']}:\n\n")
-                    f.write(f"{fb['feedback']}\n\n")
-                    if fb.get('score'):
-                        f.write(f"Score: {fb['score']}/10\n\n")
-        
-        return export_path

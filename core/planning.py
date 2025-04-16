@@ -23,26 +23,28 @@ class TaskPlanner:
         self.client = client
     
     def create_plan(self, task: str, **kwargs) -> Dict[str, Any]:
-        """
-        Create a task plan for a specific task.
-        
-        Args:
-            task: The task to plan for
-            **kwargs: Additional data needed for planning
+            """
+            Create a task plan for a specific task.
             
-        Returns:
-            A dictionary containing the task plan
-        """
-        # Select the appropriate planning method based on the task
-        if task == "generate_marketing_ad":
-            return self._plan_ad_generation(kwargs.get("campaign_brief"), kwargs.get("ad_type"))
-        elif task == "analyze_target_audience":
-            return self._plan_audience_analysis(kwargs.get("target_audience"))
-        elif task == "process_feedback":
-            return self._plan_feedback_processing(kwargs.get("feedback"), kwargs.get("ad_record"))
-        else:
-            # Generic task planning
-            return self._generic_task_planning(task, kwargs)
+            Args:
+                task: The task to plan for
+                **kwargs: Additional data needed for planning
+                
+            Returns:
+                A dictionary containing the task plan
+            """
+            # Select the appropriate planning method based on the task
+            if task == "generate_marketing_ad":
+                return self._plan_ad_generation(kwargs.get("campaign_brief"), kwargs.get("ad_type"))
+            elif task == "analyze_target_audience":
+                return self._plan_audience_analysis(kwargs.get("target_audience"))
+            elif task == "process_feedback":
+                return self._plan_feedback_processing(kwargs.get("feedback"), kwargs.get("ad_record"))
+            elif task == "generate_visual_content":
+                return self._plan_visual_generation(kwargs.get("campaign_brief"), kwargs.get("content_type"))
+            else:
+                # Generic task planning
+                return self._generic_task_planning(task, kwargs)
     
     def _plan_ad_generation(self, campaign_brief: Dict[str, Any], ad_type: str) -> Dict[str, Any]:
         """
@@ -110,6 +112,77 @@ class TaskPlanner:
         return {
             "task": "generate_marketing_ad",
             "ad_type": ad_type,
+            "detailed_plan": plan_text,
+            "plan_summary": plan_summary,
+            "created_at": time.time()
+        }
+    
+    def _plan_visual_generation(self, campaign_brief: Dict[str, Any], content_type: str) -> Dict[str, Any]:
+        """
+        Create a plan for generating visual content (images or videos).
+        
+        Args:
+            campaign_brief: The campaign brief
+            content_type: Type of visual content to generate ("image", "video", or "both")
+            
+        Returns:
+            A dictionary containing the visual generation plan
+        """
+        prompt = f"""
+        You are an expert marketing strategist specializing in visual content. Create a detailed plan for generating {content_type} content for the following product/service:
+        
+        Product/Service: {campaign_brief['product_name']}
+        Description: {campaign_brief['description']}
+        Target Audience: {campaign_brief['target_audience']}
+        Campaign Goals: {campaign_brief['campaign_goals']}
+        Tone: {campaign_brief.get('tone', 'professional')}
+        Key Selling Points: {', '.join(campaign_brief.get('key_selling_points', []))}
+        
+        Create a step-by-step plan with 5-7 steps that outlines the approach to creating effective marketing {content_type}s.
+        For each step, provide:
+        1. The action to take
+        2. A brief explanation of why this step is important
+        
+        Also provide:
+        - 3-5 key visual elements to include
+        - 2-3 suggested visual styles or themes that would resonate with the target audience
+        - Specific considerations for {content_type} content (such as composition for images or motion elements for videos)
+        """
+        
+        response = self.client.chat.completions.create(
+            model=DEFAULT_MODEL,
+            messages=[
+                {"role": "system", "content": f"You are an expert visual marketing strategist who creates detailed, actionable plans for {content_type} content creation."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=ANALYTICAL_TEMPERATURE,
+            max_tokens=1000
+        )
+        
+        plan_text = response.choices[0].message.content
+        
+        # Extract high-level summary
+        summary_prompt = f"""
+        Summarize the following marketing {content_type} generation plan in 2-3 sentences:
+        
+        {plan_text}
+        """
+        
+        summary_response = self.client.chat.completions.create(
+            model=DEFAULT_MODEL,
+            messages=[
+                {"role": "system", "content": "You are a concise summarizer."},
+                {"role": "user", "content": summary_prompt}
+            ],
+            temperature=0.3,
+            max_tokens=150
+        )
+        
+        plan_summary = summary_response.choices[0].message.content
+        
+        return {
+            "task": f"generate_{content_type}_content",
+            "content_type": content_type,
             "detailed_plan": plan_text,
             "plan_summary": plan_summary,
             "created_at": time.time()

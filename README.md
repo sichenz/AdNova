@@ -67,7 +67,7 @@ AdNova/
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.10
 - OpenAI API key
 
 ### Setup
@@ -187,3 +187,101 @@ The modular design allows for easy extension:
 ## License
 
 [MIT License](LICENSE)
+
+# Updates
+
+## Hardware Requirements
+
+Visual content generation requires a compatible GPU with CUDA support:
+
+- **For Images**: 8GB+ VRAM recommended (Stable Diffusion 3.5 Large)
+- **For Videos**: 24GB+ VRAM recommended (Mochi 1)
+
+If no compatible GPU is available, the system will generate placeholder content instead.
+
+## Setup
+
+1. Make sure you have installed the required dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+2. For optimal performance, use a system with a compatible NVIDIA GPU.
+
+## Using Visual Generation
+
+### Web Interface
+
+1. Navigate to the "Visual Content" tab in the main navigation
+2. Select your campaign brief
+3. Choose between Images, Videos, or Both
+4. Adjust settings as needed (count, theme, etc.)
+5. Click "Generate Visual Content"
+
+### Command Line
+
+1. Select option "3. Generate Visual Content" from the main menu
+2. Select your campaign brief
+3. Choose content type (Images, Videos, or Both)
+4. Specify count and theme as prompted
+
+## Customization
+
+You can customize your visual generation with:
+
+- **Visual Themes**: Choose from predefined themes like Minimalist, Corporate, Vibrant, etc.
+- **Aspect Ratios**: Select different dimensions for your images and videos
+- **Custom Prompts**: Provide your own detailed prompts for more control
+
+## Output
+
+Generated content is saved to:
+- Images: `data/generated_images/`
+- Videos: `data/generated_videos/`
+
+Metadata is stored in: `data/visual_content/`
+
+## Tips for Better Results
+
+### For Images
+
+- Use detailed descriptions of what should appear in the image
+- Specify style, lighting, and composition elements
+- Mention the product/service prominently in the prompt
+
+### For Videos
+
+- Describe motion and action (what should be moving and how)
+- Specify temporal progression (what happens over time)
+- Keep videos relatively short (31-84 frames) for better quality
+
+## Advanced Usage
+
+For more advanced control, you can directly use the API in your code:
+
+```python
+# Generate images
+image_content = agent.generate_visual_content(
+    campaign_brief=brief,
+    content_type="image",
+    count=2,
+    visual_theme="Minimalist"
+)
+
+# Generate videos
+video_content = agent.generate_visual_content(
+    campaign_brief=brief,
+    content_type="video",
+    count=1,
+    visual_theme="Corporate"
+)
+
+# Generate both with custom prompt
+combined_content = agent.generate_visual_content(
+    campaign_brief=brief,
+    content_type="both",
+    count=1,
+    visual_theme="Vibrant",
+    prompt_override="A detailed marketing video showing our product in use..."
+)
+```

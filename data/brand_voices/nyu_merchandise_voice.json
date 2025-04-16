@@ -1,0 +1,46 @@
+{
+  "product_name": "NYU Merchandise",
+  "tone": "humorous",
+  "created_at": "2025-04-09T11:15:40.570701",
+  "version": 1,
+  "voice_characteristics": {
+    "adjectives": [
+      "Witty",
+      "Informal",
+      "Engaging"
+    ],
+    "personality": "The brand voice is humorous and relatable, embodying the spirit of the vibrant NYU community. It's like the class clown who also happens to be the student body president - fun, but with a sense of responsibility.",
+    "audience_impact": "The voice should make the audience feel included, entertained, and connected to the NYU community."
+  },
+  "tone_specification": {
+    "formal_vs_casual": "A casual tone should be used predominantly, but a more formal tone can be applied for official announcements or serious matters.",
+    "emotional_range": "The voice should express a wide range of positive emotions, from excitement to pride, but always with a touch of humor. Negative emotions should be expressed subtly and sensitively.",
+    "authority_level": "The voice should convey a level of authority and expertise that reflects NYU's reputation, but without sounding pretentious."
+  },
+  "language_patterns": {
+    "sentence_preferences": "Short to medium-length sentences, with a conversational structure.",
+    "vocabulary_level": "Everyday language, with occasional academic or NYU-specific terms for flavor.",
+    "emphasized_words": "Action verbs, descriptive adjectives, and NYU-related terms.",
+    "frequent_phrases": [
+      "Go Violets!",
+      "NYU Pride",
+      "In and of the city"
+    ],
+    "avoided_phrases": [
+      "Any derogatory or offensive language",
+      "Overused cliches",
+      "Excessive academic jargon"
+    ]
+  },
+  "writing_style": {
+    "literary_devices": "Use of metaphors and analogies is encouraged, especially those relating to university life or New York City.",
+    "humor_approach": "Humor should be light-hearted and inclusive, never at the expense of others. Puns and wordplay are welcome.",
+    "audience_address": "The audience should be addressed in the second person, as 'you'.",
+    "punctuation_preferences": "Standard punctuation, with occasional use of exclamation marks for emphasis. Emojis can be used sparingly for a more casual, friendly tone."
+  },
+  "examples": {
+    "example1": "You've aced your exams, now ace your style game with our new NYU hoodies. Go Violets!",
+    "example2": "In the city that never sleeps, our NYU stationary will keep you organized and ready for anything. NYU Pride!",
+    "example3": "Feeling the chill of New York winters? Our NYU sweaters are like a warm hug from Bobcat. Cozy up, Violets!"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "feedback_id": "1520c06d-e03f-4295-8238-c1b4fcdc8c07",
+  "ad_id": "46fbacc3-a1e9-4d78-adf4-e3dbeed18ebe",
+  "brief_id": "c9ce7ec2-b065-43e2-9dd9-08614a87750a",
+  "created_at": "2025-04-09T11:24:00.149576",
+  "feedback": "incorporate more hashtags and more slangs",
+  "score": 8,
+  "processed_feedback": {
+    "analysis": {
+      "key_issues": [
+        "The client has requested the inclusion of more hashtags and slangs in the ad content."
+      ],
+      "positive_aspects": [
+        "The client gave a high score of 8/10, indicating that they are largely satisfied with the ad content."
+      ],
+      "elements_to_change": [
+        "The number of hashtags and the language style (to include more slangs) should be modified based on the feedback."
+      ],
+      "elements_to_keep": [
+        "The overall tone and message of the ad variations are well-received and should be preserved.",
+        "The hooks, highlights, and call-to-action are effective and should be maintained."
+      ],
+      "suggested_improvements": [
+        "Incorporate more relevant hashtags that not only pertain to NYU and the spring season, but also to the student lifestyle and fashion trends.",
+        "Use more slangs that resonate with the target audience - NYU students, alumni, and families. Research current slang terms that are popular among this demographic.",
+        "Consider using user-generated content or popular memes in the ad to increase engagement.",
+        "Test different ad variations with increased hashtags and slangs to see which performs best."
+      ],
+      "sentiment": "The overall sentiment of the feedback is Positive. The client has expressed satisfaction with the current ad content but has suggested improvements to better align with their target audience."
+    },
+    "improvement_recommendations": [
+      {
+        "recommendation": "Use relevant hashtags that resonate with the target audience. These hashtags should be related to NYU, college life, and the merchandise.",
+        "example": "#NYUPride #NYUGear #CollegeLife #NYUAlumni #NYUFamilies"
+      },
+      {
+        "recommendation": "Incorporate popular slang words or phrases that NYU students use. Research or engage with the students to understand their lingo and incorporate it into the ad content.",
+        "example": "Get your #NYUSwag on! Show your #VioletPride with our latest merch drop. #Lit #OnFleek #SquadGoals"
+      },
+      {
+        "recommendation": "Use NYU-specific hashtags that can help build a community around the merchandise. This can also increase visibility among the target audience.",
+        "example": "#NYUSpirit #NYULove #NYUMerch #NYUStyle"
+      },
+      {
+        "recommendation": "Use slangs that are not only popular among students but also understandable by alumni and families. The language should be inclusive and not alienate any part of the target audience.",
+        "example": "Get your game on with our #NYUGear. Perfect for study sessions, game nights, and everything in between. #Goals #Winning #NYULife"
+      },
+      {
+        "recommendation": "Use a mix of popular and NYU-specific hashtags. This can help the post reach a wider audience while still being relevant to the NYU community.",
+        "example": "Show your #NYUPride with our new merch. Perfect for #StudySesh, #GameNight, or just showing off your #NYUSwag. #Goals #Squad #NYULove"
+      }
+    ],
+    "original_feedback": "incorporate more hashtags and more slangs",
+    "score": 8
+  }
+}
