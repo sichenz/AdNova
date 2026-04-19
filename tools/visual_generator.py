@@ -12,8 +12,19 @@ from datetime import datetime
 import torch
 from config.settings import VISUAL_GENERATION_ENABLED, IMAGE_OUTPUT_DIR, VIDEO_OUTPUT_DIR
 
-# Check if CUDA is available
-CUDA_AVAILABLE = torch.cuda.is_available()
+# Check if hardware acceleration is available
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+    DEVICE_AVAILABLE = True
+elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+    DEVICE = "mps"
+    DEVICE_AVAILABLE = True
+else:
+    DEVICE = "cpu"
+    DEVICE_AVAILABLE = False
+    
+# Determine appropriate dtype based on the device
+DTYPE = torch.bfloat16 if DEVICE == "cuda" else torch.float16
 
 class VisualGenerator:
     """
@@ -46,8 +57,8 @@ class VisualGenerator:
             print("Visual generation is disabled in settings. Only placeholder generation will be available.")
             return
         
-        if not CUDA_AVAILABLE:
-            print("Warning: CUDA is not available. Visual generation will be limited to CPU which may be very slow.")
+        if not DEVICE_AVAILABLE:
+            print("Warning: Hardware acceleration (CUDA/MPS) is not available. Visual generation will be limited to CPU which may be very slow.")
     
     def generate_image(self, 
                      prompt: str, 
@@ -78,7 +89,7 @@ class VisualGenerator:
         output_path = os.path.join(IMAGE_OUTPUT_DIR, f"{image_id}.png")
         
         # Generate the image
-        if self.is_enabled and CUDA_AVAILABLE:
+        if self.is_enabled and DEVICE_AVAILABLE:
             try:
                 # Lazy load the pipeline
                 if self.sd_pipeline is None:
@@ -89,9 +100,9 @@ class VisualGenerator:
                         print("Loading Stable Diffusion 3.5 Large model (this may take a moment)...")
                         self.sd_pipeline = StableDiffusion3Pipeline.from_pretrained(
                             "stabilityai/stable-diffusion-3.5-large", 
-                            torch_dtype=torch.bfloat16
+                            torch_dtype=DTYPE
                         )
-                        self.sd_pipeline = self.sd_pipeline.to("cuda")
+                        self.sd_pipeline = self.sd_pipeline.to(DEVICE)
                         
                         # To save memory
                         self.sd_pipeline.enable_vae_tiling()
@@ -103,7 +114,7 @@ class VisualGenerator:
                     # Set the seed if provided
                     generator = None
                     if seed is not None:
-                        generator = torch.Generator("cuda").manual_seed(seed)
+                        generator = torch.Generator(DEVICE).manual_seed(seed)
                     
                     # Generate the image
                     image = self.sd_pipeline(
@@ -129,7 +140,7 @@ class VisualGenerator:
                 self._generate_placeholder_image(output_path, width, height)
                 real_generation = False
         else:
-            # Visual generation is disabled or CUDA is not available, generate placeholder
+            # Visual generation is disabled or hardware acceleration is not available, generate placeholder
             self._generate_placeholder_image(output_path, width, height)
             real_generation = False
         
@@ -183,7 +194,7 @@ class VisualGenerator:
         output_path = os.path.join(VIDEO_OUTPUT_DIR, f"{video_id}.mp4")
         
         # Generate the video
-        if self.is_enabled and CUDA_AVAILABLE:
+        if self.is_enabled and DEVICE_AVAILABLE:
             try:
                 # Lazy load the pipeline
                 if self.mochi_pipeline is None:
@@ -192,10 +203,14 @@ class VisualGenerator:
                         import torch
                         
                         print("Loading Mochi 1 model (this may take a moment)...")
+                        # Variant depends on what's available; fallback if not CUDA
+                        variant = "bf16" if DEVICE == "cuda" else None
+                        kwargs = {"variant": variant} if variant else {}
+                        
                         self.mochi_pipeline = MochiPipeline.from_pretrained(
                             "genmo/mochi-1-preview", 
-                            variant="bf16", 
-                            torch_dtype=torch.bfloat16
+                            torch_dtype=DTYPE,
+                            **kwargs
                         )
                         
                         # Enable memory savings
@@ -209,10 +224,17 @@ class VisualGenerator:
                     # Set the seed if provided
                     generator = None
                     if seed is not None:
-                        generator = torch.Generator("cuda").manual_seed(seed)
+                        generator = torch.Generator(DEVICE).manual_seed(seed)
                     
                     # Generate the video
-                    with torch.autocast("cuda", torch.bfloat16, cache_enabled=False):
+                    # Only use autocast if on CUDA, as MPS doesn't fully support it the same way
+                    if DEVICE == "cuda":
+                        context = torch.autocast("cuda", DTYPE, cache_enabled=False)
+                    else:
+                        from contextlib import nullcontext
+                        context = nullcontext()
+                        
+                    with context:
                         video = self.mochi_pipeline(
                             prompt=enhanced_prompt,
                             negative_prompt=negative_prompt,
@@ -238,7 +260,7 @@ class VisualGenerator:
                 self._generate_placeholder_video(output_path, width, height, num_frames)
                 real_generation = False
         else:
-            # Visual generation is disabled or CUDA is not available, generate placeholder
+            # Visual generation is disabled or hardware acceleration is not available, generate placeholder
             self._generate_placeholder_video(output_path, width, height, num_frames)
             real_generation = False
         

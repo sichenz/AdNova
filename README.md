@@ -73,31 +73,28 @@ AdNova/
 ### Setup
 
 1. Clone the repository:
-   ```
-   git clone https://github.com/yourusername/marketing-ad-agent.git
-   cd marketing-ad-agent
+   ```bash
+   git clone https://github.com/sichenz/AdNova.git
+   cd AdNova
    ```
 
-2. Install dependencies:
+2. Create and activate a Conda environment:
+   ```bash
+   conda create -n adnova python=3.10 -y
+   conda activate adnova
    ```
+
+3. Install dependencies:
+   ```bash
    pip install -r requirements.txt
    ```
 
-3. Create a `.env` file with your API key:
+4. Create a `.env` file with your API key:
    ```
    OPENAI_API_KEY=your_api_key_here
    ```
 
-**NOTE:** When commiting to this repo, please do not commit the `.env` file. You can use the following commands to ensure this:
-
-```
-git rm --cached config/.env
-echo "config/.env" >> .gitignore
-git add .gitignore
-git add -A
-git commit -m "Your commit message here"
-git push
-```
+**NOTE:** When commiting to this repo, please do not commit the `.env` file.
 
 ## Usage
 
@@ -192,21 +189,22 @@ The modular design allows for easy extension:
 
 ## Hardware Requirements
 
-Visual content generation requires a compatible GPU with CUDA support:
+Visual content generation requires hardware acceleration (either NVIDIA CUDA or Apple Silicon MPS):
 
-- **For Images**: 8GB+ VRAM recommended (Stable Diffusion 3.5 Large)
-- **For Videos**: 24GB+ VRAM recommended (Mochi 1)
+- **For Images**: 8GB+ VRAM / Unified Memory recommended (Stable Diffusion 3.5 Large)
+- **For Videos**: 24GB+ VRAM / Unified Memory recommended (Mochi 1)
 
-If no compatible GPU is available, the system will generate placeholder content instead.
+If no compatible hardware acceleration is available (e.g., standard CPU), the system will generate placeholder content instead.
 
 ## Setup
 
-1. Make sure you have installed the required dependencies:
-   ```
+1. Ensure your Conda environment is activated and dependencies are installed:
+   ```bash
+   conda activate adnova
    pip install -r requirements.txt
    ```
 
-2. For optimal performance, use a system with a compatible NVIDIA GPU.
+2. For optimal performance, use a system with a compatible NVIDIA GPU or a modern Apple Silicon Mac (M1/M2/M3/M4) with sufficient unified memory.
 
 ## Using Visual Generation
 

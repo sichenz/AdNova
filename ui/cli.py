@@ -269,11 +269,13 @@ def generate_visual_content(agent):
     """
     print("\n===== Generate Visual Content =====")
     
-    # Check for CUDA
+    # Check for hardware acceleration
     import torch
-    if not torch.cuda.is_available():
-        print("\nWARNING: No GPU with CUDA detected. Visual generation will use placeholders only.")
-        print("For full functionality, please run on a system with a compatible GPU.")
+    device_available = torch.cuda.is_available() or (hasattr(torch.backends, "mps") and torch.backends.mps.is_available())
+    
+    if not device_available:
+        print("\nWARNING: No hardware acceleration (CUDA/MPS) detected. Visual generation will use placeholders only.")
+        print("For full functionality, please run on a system with a compatible GPU or Apple Silicon Mac.")
         print("Continue anyway? (y/n)")
         if input().lower() != "y":
             return
